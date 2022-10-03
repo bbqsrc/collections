@@ -1,14 +1,12 @@
-use core::ops::{Index, IndexMut};
-
 use crate::{Collection, CollectionMut};
 
-pub trait List<T>: Index<usize> + Collection<T> {
+pub trait List<T>: Collection<T> {
     fn find_index(&self, other: &T) -> Option<usize>
     where
         T: PartialEq;
 }
 
-pub trait ListMut<T>: IndexMut<usize> + CollectionMut<T> {
+pub trait ListMut<T>: CollectionMut<T> {
     fn push(&mut self, item: T);
     fn pop(&mut self) -> Option<T>;
     fn capacity(&self) -> usize;
