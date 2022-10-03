@@ -40,9 +40,13 @@ mod alloc {
         }
     }
 
-    impl<T: 'static> Iterable for Vec<T> {
-        type Item<'collection> = &'collection T;
-        type Iterator<'collection> = std::slice::Iter<'collection, T>;
+    impl<T> Iterable for Vec<T> {
+        type Item<'collection> = &'collection T
+        where
+            T: 'collection;
+        type Iterator<'collection> = std::slice::Iter<'collection, T>
+        where
+            T: 'collection;
 
         #[inline(always)]
         fn iter<'c>(&'c self) -> Self::Iterator<'c> {
@@ -50,9 +54,13 @@ mod alloc {
         }
     }
 
-    impl<T: 'static> IterableMut for Vec<T> {
-        type ItemMut<'collection> = &'collection mut T;
-        type IteratorMut<'collection> = std::slice::IterMut<'collection, T>;
+    impl<T> IterableMut for Vec<T> {
+        type ItemMut<'collection> = &'collection mut T
+        where
+            T: 'collection;
+        type IteratorMut<'collection> = std::slice::IterMut<'collection, T>
+        where
+            T: 'collection;
 
         #[inline(always)]
         fn iter_mut<'c>(&'c mut self) -> Self::IteratorMut<'c> {
@@ -60,7 +68,7 @@ mod alloc {
         }
     }
 
-    impl<T: 'static> Collection<T> for Vec<T> {
+    impl<T> Collection<T> for Vec<T> {
         fn len(&self) -> usize {
             self.len()
         }
@@ -73,13 +81,13 @@ mod alloc {
         }
     }
 
-    impl<T: 'static> CollectionMut<T> for Vec<T> {
+    impl<T> CollectionMut<T> for Vec<T> {
         fn clear(&mut self) {
             inner_vec::clear(self);
         }
     }
 
-    impl<T: 'static> List<T> for Vec<T> {
+    impl<T> List<T> for Vec<T> {
         fn find_index(&self, other: &T) -> Option<usize>
         where
             T: PartialEq,
@@ -88,7 +96,7 @@ mod alloc {
         }
     }
 
-    impl<T: 'static> ListMut<T> for Vec<T> {
+    impl<T> ListMut<T> for Vec<T> {
         #[inline(always)]
         fn capacity(&self) -> usize {
             self.capacity()
