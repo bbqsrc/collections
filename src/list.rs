@@ -22,6 +22,7 @@ mod alloc {
     use crate::{Collection, CollectionMut, Iterable, IterableMut};
 
     mod inner_vec {
+        use alloc::vec::Vec;
         use core::slice::{Iter, IterMut};
 
         #[inline(always)]
@@ -44,7 +45,7 @@ mod alloc {
         type Item<'collection> = &'collection T
         where
             T: 'collection;
-        type Iterator<'collection> = std::slice::Iter<'collection, T>
+        type Iterator<'collection> = alloc::slice::Iter<'collection, T>
         where
             T: 'collection;
 
@@ -58,7 +59,7 @@ mod alloc {
         type ItemMut<'collection> = &'collection mut T
         where
             T: 'collection;
-        type IteratorMut<'collection> = std::slice::IterMut<'collection, T>
+        type IteratorMut<'collection> = alloc::slice::IterMut<'collection, T>
         where
             T: 'collection;
 
