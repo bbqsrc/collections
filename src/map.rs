@@ -31,13 +31,19 @@ pub trait MapMut<K, V>: IterableMut {
 
 #[cfg(feature = "std")]
 mod std {
-    use std::{hash::Hash, collections::{HashMap, hash_map}};
+    use std::{
+        collections::{hash_map, HashMap},
+        hash::Hash,
+    };
 
     use super::Map;
     use crate::{Iterable, IterableMut, MapMut};
 
     mod inner_hashmap {
-        use std::{hash::Hash, collections::{hash_map, HashMap}};
+        use std::{
+            collections::{hash_map, HashMap},
+            hash::Hash,
+        };
 
         #[inline(always)]
         pub(crate) fn iter<K, V>(map: &HashMap<K, V>) -> hash_map::Iter<'_, K, V> {
@@ -80,7 +86,11 @@ mod std {
         }
 
         #[inline(always)]
-        pub(crate) fn insert<K: Hash + Eq, V>(map: &mut HashMap<K, V>, key: K, value: V) -> Option<V> {
+        pub(crate) fn insert<K: Hash + Eq, V>(
+            map: &mut HashMap<K, V>,
+            key: K,
+            value: V,
+        ) -> Option<V> {
             map.insert(key, value)
         }
 
