@@ -1,0 +1,16 @@
+[package]
+name = "collections"
+description = "Traits for generic collections, such as lists, maps and sets (supports no_std)"
+author = "Brendan Molloy <brendan@bbqsrc>"
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/bbqsrc/collections"
+version = "0.0.1"
+edition = "2021"
+rust-version = "1.65"
+
+[dependencies]
+
+[features]
+default = ["std"]
+std = ["alloc"]
+alloc = []
