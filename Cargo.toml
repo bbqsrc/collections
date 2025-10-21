@@ -9,8 +9,10 @@ edition = "2021"
 rust-version = "1.65"
 
 [dependencies]
+heapless = { version = "0.9.1", optional = true }
 
 [features]
 default = ["std"]
 std = ["alloc"]
-alloc = []
+alloc = ["heapless/alloc"]
+heapless = ["dep:heapless"]

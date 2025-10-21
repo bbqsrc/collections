@@ -61,10 +61,12 @@ mod std {
     }
 
     impl<T> Iterable for HashSet<T> {
-        type Item<'collection> = &'collection T
+        type Item<'collection>
+            = &'collection T
         where
             T: 'collection;
-        type Iterator<'collection> = hash_set::Iter<'collection, T>
+        type Iterator<'collection>
+            = hash_set::Iter<'collection, T>
         where
             T: 'collection;
 
@@ -120,6 +122,3 @@ mod std {
         }
     }
 }
-
-#[cfg(feature = "std")]
-pub use self::std::*;

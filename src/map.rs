@@ -101,11 +101,13 @@ mod std {
     }
 
     impl<K, V> Iterable for HashMap<K, V> {
-        type Item<'collection> = (&'collection K, &'collection V)
+        type Item<'collection>
+            = (&'collection K, &'collection V)
         where
             Self: 'collection;
 
-        type Iterator<'collection> = hash_map::Iter<'collection, K, V>
+        type Iterator<'collection>
+            = hash_map::Iter<'collection, K, V>
         where
             Self: 'collection;
 
@@ -116,12 +118,14 @@ mod std {
     }
 
     impl<K: Hash + Eq, V> Map<K, V> for HashMap<K, V> {
-        type Keys<'key> = hash_map::Keys<'key, K, V>
+        type Keys<'key>
+            = hash_map::Keys<'key, K, V>
         where
             K: 'key,
             Self: 'key;
 
-        type Values<'value> = hash_map::Values<'value, K, V>
+        type Values<'value>
+            = hash_map::Values<'value, K, V>
         where
             V: 'value,
             Self: 'value;
@@ -148,11 +152,13 @@ mod std {
     }
 
     impl<K: Hash + Eq, V> IterableMut for HashMap<K, V> {
-        type ItemMut<'collection> = (&'collection K, &'collection mut V)
+        type ItemMut<'collection>
+            = (&'collection K, &'collection mut V)
         where
             Self: 'collection;
 
-        type IteratorMut<'collection> = hash_map::IterMut<'collection, K, V>
+        type IteratorMut<'collection>
+            = hash_map::IterMut<'collection, K, V>
         where
             Self: 'collection;
 
@@ -162,7 +168,8 @@ mod std {
     }
 
     impl<K: Hash + Eq, V> MapMut<K, V> for HashMap<K, V> {
-        type ValuesMut<'value> = hash_map::ValuesMut<'value, K, V>
+        type ValuesMut<'value>
+            = hash_map::ValuesMut<'value, K, V>
         where
             V: 'value,
             Self: 'value;
@@ -249,11 +256,13 @@ mod alloc {
     }
 
     impl<K, V> Iterable for BTreeMap<K, V> {
-        type Item<'collection> = (&'collection K, &'collection V)
+        type Item<'collection>
+            = (&'collection K, &'collection V)
         where
             Self: 'collection;
 
-        type Iterator<'collection> = btree_map::Iter<'collection, K, V>
+        type Iterator<'collection>
+            = btree_map::Iter<'collection, K, V>
         where
             Self: 'collection;
 
@@ -264,12 +273,14 @@ mod alloc {
     }
 
     impl<K: Ord, V> Map<K, V> for BTreeMap<K, V> {
-        type Keys<'key> = btree_map::Keys<'key, K, V>
+        type Keys<'key>
+            = btree_map::Keys<'key, K, V>
         where
             K: 'key,
             Self: 'key;
 
-        type Values<'value> = btree_map::Values<'value, K, V>
+        type Values<'value>
+            = btree_map::Values<'value, K, V>
         where
             V: 'value,
             Self: 'value;
@@ -296,11 +307,13 @@ mod alloc {
     }
 
     impl<K: Ord, V> IterableMut for BTreeMap<K, V> {
-        type ItemMut<'collection> = (&'collection K, &'collection mut V)
+        type ItemMut<'collection>
+            = (&'collection K, &'collection mut V)
         where
             Self: 'collection;
 
-        type IteratorMut<'collection> = btree_map::IterMut<'collection, K, V>
+        type IteratorMut<'collection>
+            = btree_map::IterMut<'collection, K, V>
         where
             Self: 'collection;
 
@@ -310,7 +323,8 @@ mod alloc {
     }
 
     impl<K: Ord, V> MapMut<K, V> for BTreeMap<K, V> {
-        type ValuesMut<'value> = btree_map::ValuesMut<'value, K, V>
+        type ValuesMut<'value>
+            = btree_map::ValuesMut<'value, K, V>
         where
             V: 'value,
             Self: 'value;
