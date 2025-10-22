@@ -1,0 +1,567 @@
+use alloc::vec::Vec;
+
+use super::{List, ListMut, ListResizable};
+use crate::{Collection, CollectionMut, Iterable, IterableMut};
+
+mod inner_vec {
+    use alloc::vec::Vec;
+    use core::slice::{Iter, IterMut};
+
+    #[inline(always)]
+    pub(crate) fn iter<T>(vec: &Vec<T>) -> Iter<'_, T> {
+        vec.iter()
+    }
+
+    #[inline(always)]
+    pub(crate) fn iter_mut<T>(vec: &mut Vec<T>) -> IterMut<'_, T> {
+        vec.iter_mut()
+    }
+
+    #[inline(always)]
+    pub(crate) fn clear<T>(vec: &mut Vec<T>) {
+        vec.clear();
+    }
+
+    #[inline(always)]
+    pub(crate) fn first<T>(vec: &Vec<T>) -> Option<&T> {
+        vec.first()
+    }
+
+    #[inline(always)]
+    pub(crate) fn last<T>(vec: &Vec<T>) -> Option<&T> {
+        vec.last()
+    }
+
+    #[inline(always)]
+    pub(crate) fn get<T>(vec: &Vec<T>, index: usize) -> Option<&T> {
+        vec.get(index)
+    }
+
+    #[inline(always)]
+    pub(crate) fn binary_search<T: Ord>(vec: &Vec<T>, x: &T) -> Result<usize, usize> {
+        vec.binary_search(x)
+    }
+
+    #[inline(always)]
+    pub(crate) fn binary_search_by<T, F>(vec: &Vec<T>, f: F) -> Result<usize, usize>
+    where
+        F: FnMut(&T) -> core::cmp::Ordering,
+    {
+        vec.binary_search_by(f)
+    }
+
+    #[inline(always)]
+    pub(crate) fn binary_search_by_key<T, B, F>(vec: &Vec<T>, b: &B, f: F) -> Result<usize, usize>
+    where
+        F: FnMut(&T) -> B,
+        B: Ord,
+    {
+        vec.binary_search_by_key(b, f)
+    }
+
+    #[inline(always)]
+    pub(crate) fn starts_with<T: PartialEq>(vec: &Vec<T>, needle: &[T]) -> bool {
+        vec.starts_with(needle)
+    }
+
+    #[inline(always)]
+    pub(crate) fn ends_with<T: PartialEq>(vec: &Vec<T>, needle: &[T]) -> bool {
+        vec.ends_with(needle)
+    }
+
+    #[inline(always)]
+    pub(crate) fn first_mut<T>(vec: &mut Vec<T>) -> Option<&mut T> {
+        vec.first_mut()
+    }
+
+    #[inline(always)]
+    pub(crate) fn last_mut<T>(vec: &mut Vec<T>) -> Option<&mut T> {
+        vec.last_mut()
+    }
+
+    #[inline(always)]
+    pub(crate) fn get_mut<T>(vec: &mut Vec<T>, index: usize) -> Option<&mut T> {
+        vec.get_mut(index)
+    }
+
+    #[inline(always)]
+    pub(crate) fn insert<T>(vec: &mut Vec<T>, index: usize, element: T) {
+        vec.insert(index, element)
+    }
+
+    #[inline(always)]
+    pub(crate) fn remove<T>(vec: &mut Vec<T>, index: usize) -> T {
+        vec.remove(index)
+    }
+
+    #[inline(always)]
+    pub(crate) fn swap_remove<T>(vec: &mut Vec<T>, index: usize) -> T {
+        vec.swap_remove(index)
+    }
+
+    #[inline(always)]
+    pub(crate) fn swap<T>(vec: &mut Vec<T>, a: usize, b: usize) {
+        vec.swap(a, b)
+    }
+
+    #[inline(always)]
+    pub(crate) fn reverse<T>(vec: &mut Vec<T>) {
+        vec.reverse()
+    }
+
+    #[inline(always)]
+    pub(crate) fn sort<T: Ord>(vec: &mut Vec<T>) {
+        vec.sort()
+    }
+
+    #[inline(always)]
+    pub(crate) fn sort_by<T, F>(vec: &mut Vec<T>, compare: F)
+    where
+        F: FnMut(&T, &T) -> core::cmp::Ordering,
+    {
+        vec.sort_by(compare)
+    }
+
+    #[inline(always)]
+    pub(crate) fn sort_by_key<T, K, F>(vec: &mut Vec<T>, f: F)
+    where
+        F: FnMut(&T) -> K,
+        K: Ord,
+    {
+        vec.sort_by_key(f)
+    }
+
+    #[inline(always)]
+    pub(crate) fn sort_unstable<T: Ord>(vec: &mut Vec<T>) {
+        vec.sort_unstable()
+    }
+
+    #[inline(always)]
+    pub(crate) fn sort_unstable_by<T, F>(vec: &mut Vec<T>, compare: F)
+    where
+        F: FnMut(&T, &T) -> core::cmp::Ordering,
+    {
+        vec.sort_unstable_by(compare)
+    }
+
+    #[inline(always)]
+    pub(crate) fn sort_unstable_by_key<T, K, F>(vec: &mut Vec<T>, f: F)
+    where
+        F: FnMut(&T) -> K,
+        K: Ord,
+    {
+        vec.sort_unstable_by_key(f)
+    }
+
+    #[inline(always)]
+    pub(crate) fn truncate<T>(vec: &mut Vec<T>, len: usize) {
+        vec.truncate(len)
+    }
+
+    #[inline(always)]
+    pub(crate) fn resize<T: Clone>(vec: &mut Vec<T>, new_len: usize, value: T) {
+        vec.resize(new_len, value)
+    }
+
+    #[inline(always)]
+    pub(crate) fn resize_with<T, F>(vec: &mut Vec<T>, new_len: usize, f: F)
+    where
+        F: FnMut() -> T,
+    {
+        vec.resize_with(new_len, f)
+    }
+
+    #[inline(always)]
+    pub(crate) fn reserve<T>(vec: &mut Vec<T>, additional: usize) {
+        vec.reserve(additional)
+    }
+
+    #[inline(always)]
+    pub(crate) fn shrink_to_fit<T>(vec: &mut Vec<T>) {
+        vec.shrink_to_fit()
+    }
+
+    #[inline(always)]
+    pub(crate) fn retain<T, F>(vec: &mut Vec<T>, f: F)
+    where
+        F: FnMut(&T) -> bool,
+    {
+        vec.retain(f)
+    }
+
+    #[inline(always)]
+    pub(crate) fn retain_mut<T, F>(vec: &mut Vec<T>, f: F)
+    where
+        F: FnMut(&mut T) -> bool,
+    {
+        vec.retain_mut(f)
+    }
+
+    #[inline(always)]
+    pub(crate) fn dedup<T: PartialEq>(vec: &mut Vec<T>) {
+        vec.dedup()
+    }
+
+    #[inline(always)]
+    pub(crate) fn dedup_by<T, F>(vec: &mut Vec<T>, same_bucket: F)
+    where
+        F: FnMut(&mut T, &mut T) -> bool,
+    {
+        vec.dedup_by(same_bucket)
+    }
+
+    #[inline(always)]
+    pub(crate) fn dedup_by_key<T, F, K>(vec: &mut Vec<T>, key: F)
+    where
+        F: FnMut(&mut T) -> K,
+        K: PartialEq,
+    {
+        vec.dedup_by_key(key)
+    }
+
+    #[inline(always)]
+    pub(crate) fn fill<T: Clone>(vec: &mut Vec<T>, value: T) {
+        vec.fill(value)
+    }
+
+    #[inline(always)]
+    pub(crate) fn fill_with<T, F>(vec: &mut Vec<T>, f: F)
+    where
+        F: FnMut() -> T,
+    {
+        vec.fill_with(f)
+    }
+
+    #[inline(always)]
+    pub(crate) fn append<T>(vec: &mut Vec<T>, other: &mut Vec<T>) {
+        vec.append(other)
+    }
+
+    #[inline(always)]
+    pub(crate) fn split_off<T>(vec: &mut Vec<T>, at: usize) -> Vec<T> {
+        vec.split_off(at)
+    }
+}
+
+impl<T> Iterable for Vec<T> {
+    type Item<'collection>
+        = &'collection T
+    where
+        T: 'collection;
+    type Iterator<'collection>
+        = core::slice::Iter<'collection, T>
+    where
+        T: 'collection;
+
+    #[inline(always)]
+    fn iter<'c>(&'c self) -> Self::Iterator<'c> {
+        inner_vec::iter(self)
+    }
+}
+
+impl<T> IterableMut for Vec<T> {
+    type ItemMut<'collection>
+        = &'collection mut T
+    where
+        T: 'collection;
+    type IteratorMut<'collection>
+        = core::slice::IterMut<'collection, T>
+    where
+        T: 'collection;
+
+    #[inline(always)]
+    fn iter_mut<'c>(&'c mut self) -> Self::IteratorMut<'c> {
+        inner_vec::iter_mut(self)
+    }
+}
+
+impl<T> Collection<T> for Vec<T> {
+    fn len(&self) -> usize {
+        self.len()
+    }
+
+    fn contains(&self, other: &T) -> bool
+    where
+        T: PartialEq,
+    {
+        self.iter().find(|x| *x == other).is_some()
+    }
+}
+
+impl<T> CollectionMut<T> for Vec<T> {
+    fn clear(&mut self) {
+        inner_vec::clear(self);
+    }
+}
+
+impl<T> List<T> for Vec<T> {
+    fn find_index(&self, other: &T) -> Option<usize>
+    where
+        T: PartialEq,
+    {
+        self.iter().position(|x| x == other)
+    }
+
+    #[inline(always)]
+    fn first(&self) -> Option<&T> {
+        inner_vec::first(self)
+    }
+
+    #[inline(always)]
+    fn last(&self) -> Option<&T> {
+        inner_vec::last(self)
+    }
+
+    #[inline(always)]
+    fn get(&self, index: usize) -> Option<&T> {
+        inner_vec::get(self, index)
+    }
+
+    #[inline(always)]
+    fn binary_search(&self, x: &T) -> Result<usize, usize>
+    where
+        T: Ord,
+    {
+        inner_vec::binary_search(self, x)
+    }
+
+    #[inline(always)]
+    fn binary_search_by<F>(&self, f: F) -> Result<usize, usize>
+    where
+        F: FnMut(&T) -> core::cmp::Ordering,
+    {
+        inner_vec::binary_search_by(self, f)
+    }
+
+    #[inline(always)]
+    fn binary_search_by_key<B, F>(&self, b: &B, f: F) -> Result<usize, usize>
+    where
+        F: FnMut(&T) -> B,
+        B: Ord,
+    {
+        inner_vec::binary_search_by_key(self, b, f)
+    }
+
+    #[inline(always)]
+    fn starts_with(&self, needle: &[T]) -> bool
+    where
+        T: PartialEq,
+    {
+        inner_vec::starts_with(self, needle)
+    }
+
+    #[inline(always)]
+    fn ends_with(&self, needle: &[T]) -> bool
+    where
+        T: PartialEq,
+    {
+        inner_vec::ends_with(self, needle)
+    }
+}
+
+impl<T> ListMut<T> for Vec<T> {
+    #[inline(always)]
+    fn capacity(&self) -> usize {
+        self.capacity()
+    }
+
+    #[inline(always)]
+    fn push(&mut self, item: T) {
+        self.push(item)
+    }
+
+    #[inline(always)]
+    fn pop(&mut self) -> Option<T> {
+        self.pop()
+    }
+
+    #[inline(always)]
+    fn first_mut(&mut self) -> Option<&mut T> {
+        inner_vec::first_mut(self)
+    }
+
+    #[inline(always)]
+    fn last_mut(&mut self) -> Option<&mut T> {
+        inner_vec::last_mut(self)
+    }
+
+    #[inline(always)]
+    fn get_mut(&mut self, index: usize) -> Option<&mut T> {
+        inner_vec::get_mut(self, index)
+    }
+
+    #[inline(always)]
+    fn insert(&mut self, index: usize, element: T) {
+        inner_vec::insert(self, index, element)
+    }
+
+    #[inline(always)]
+    fn remove(&mut self, index: usize) -> T {
+        inner_vec::remove(self, index)
+    }
+
+    #[inline(always)]
+    fn swap_remove(&mut self, index: usize) -> T {
+        inner_vec::swap_remove(self, index)
+    }
+
+    #[inline(always)]
+    fn swap(&mut self, a: usize, b: usize) {
+        inner_vec::swap(self, a, b)
+    }
+
+    #[inline(always)]
+    fn reverse(&mut self) {
+        inner_vec::reverse(self)
+    }
+
+    #[inline(always)]
+    fn sort(&mut self)
+    where
+        T: Ord,
+    {
+        inner_vec::sort(self)
+    }
+
+    #[inline(always)]
+    fn sort_by<F>(&mut self, compare: F)
+    where
+        F: FnMut(&T, &T) -> core::cmp::Ordering,
+    {
+        inner_vec::sort_by(self, compare)
+    }
+
+    #[inline(always)]
+    fn sort_by_key<K, F>(&mut self, f: F)
+    where
+        F: FnMut(&T) -> K,
+        K: Ord,
+    {
+        inner_vec::sort_by_key(self, f)
+    }
+
+    #[inline(always)]
+    fn sort_unstable(&mut self)
+    where
+        T: Ord,
+    {
+        inner_vec::sort_unstable(self)
+    }
+
+    #[inline(always)]
+    fn sort_unstable_by<F>(&mut self, compare: F)
+    where
+        F: FnMut(&T, &T) -> core::cmp::Ordering,
+    {
+        inner_vec::sort_unstable_by(self, compare)
+    }
+
+    #[inline(always)]
+    fn sort_unstable_by_key<K, F>(&mut self, f: F)
+    where
+        F: FnMut(&T) -> K,
+        K: Ord,
+    {
+        inner_vec::sort_unstable_by_key(self, f)
+    }
+
+    #[inline(always)]
+    fn truncate(&mut self, len: usize) {
+        inner_vec::truncate(self, len)
+    }
+
+    #[inline(always)]
+    fn retain<F>(&mut self, f: F)
+    where
+        F: FnMut(&T) -> bool,
+    {
+        inner_vec::retain(self, f)
+    }
+
+    #[inline(always)]
+    fn retain_mut<F>(&mut self, f: F)
+    where
+        F: FnMut(&mut T) -> bool,
+    {
+        inner_vec::retain_mut(self, f)
+    }
+
+    #[inline(always)]
+    fn dedup(&mut self)
+    where
+        T: PartialEq,
+    {
+        inner_vec::dedup(self)
+    }
+
+    #[inline(always)]
+    fn dedup_by<F>(&mut self, same_bucket: F)
+    where
+        F: FnMut(&mut T, &mut T) -> bool,
+    {
+        inner_vec::dedup_by(self, same_bucket)
+    }
+
+    #[inline(always)]
+    fn dedup_by_key<F, K>(&mut self, key: F)
+    where
+        F: FnMut(&mut T) -> K,
+        K: PartialEq,
+    {
+        inner_vec::dedup_by_key(self, key)
+    }
+
+    #[inline(always)]
+    fn fill(&mut self, value: T)
+    where
+        T: Clone,
+    {
+        inner_vec::fill(self, value)
+    }
+
+    #[inline(always)]
+    fn fill_with<F>(&mut self, f: F)
+    where
+        F: FnMut() -> T,
+    {
+        inner_vec::fill_with(self, f)
+    }
+
+    #[inline(always)]
+    fn append(&mut self, other: &mut Self) {
+        inner_vec::append(self, other)
+    }
+
+    #[inline(always)]
+    fn split_off(&mut self, at: usize) -> Self {
+        inner_vec::split_off(self, at)
+    }
+}
+
+impl<T> ListResizable<T> for Vec<T> {
+    #[inline(always)]
+    fn resize(&mut self, new_len: usize, value: T)
+    where
+        T: Clone,
+    {
+        inner_vec::resize(self, new_len, value)
+    }
+
+    #[inline(always)]
+    fn resize_with<F>(&mut self, new_len: usize, f: F)
+    where
+        F: FnMut() -> T,
+    {
+        inner_vec::resize_with(self, new_len, f)
+    }
+
+    #[inline(always)]
+    fn reserve(&mut self, additional: usize) {
+        inner_vec::reserve(self, additional)
+    }
+
+    #[inline(always)]
+    fn shrink_to_fit(&mut self) {
+        inner_vec::shrink_to_fit(self)
+    }
+}

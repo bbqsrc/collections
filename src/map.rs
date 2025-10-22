@@ -196,9 +196,6 @@ mod std {
     }
 }
 
-#[cfg(feature = "std")]
-pub use self::std::*;
-
 #[cfg(feature = "alloc")]
 mod alloc {
     use alloc::collections::{btree_map, BTreeMap};
@@ -352,5 +349,9 @@ mod alloc {
     }
 }
 
-#[cfg(feature = "alloc")]
+#[cfg(feature = "std")]
+#[allow(unused_imports)]
+pub use self::std::*;
+
+#[cfg(all(not(feature = "std"), feature = "alloc"))]
 pub use self::alloc::*;
