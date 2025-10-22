@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 
-use super::{CapacityError, List, ListMut, ListResizable, ListSortable};
-use crate::{Collection, CollectionMut, Iterable, IterableMut};
+use super::{List, ListMut, ListResizable, ListSortable};
+use crate::{Collection, CollectionMut, Error, Iterable, IterableMut};
 
 mod inner_vec {
     use alloc::vec::Vec;
@@ -13,14 +13,14 @@ mod inner_vec {
     #[cfg(feature = "std")]
     use std::panic::catch_unwind;
 
+    use crate::Error;
+
     #[cfg(not(feature = "std"))]
     fn catch_unwind<F: FnOnce() -> R + core::panic::UnwindSafe, R>(
         f: F,
     ) -> Result<R, alloc::boxed::Box<dyn core::any::Any + Send + 'static>> {
         Ok(f())
     }
-
-    use crate::CapacityError;
 
     #[inline(always)]
     pub(crate) fn iter<T>(vec: &Vec<T>) -> Iter<'_, T> {
@@ -85,7 +85,7 @@ mod inner_vec {
     }
 
     #[inline(always)]
-    pub(crate) fn push<T>(vec: &mut Vec<T>, item: T) -> Result<(), T> {
+    pub(crate) fn push<T>(vec: &mut Vec<T>, item: T) -> Result<(), Error<T>> {
         use core::mem::ManuallyDrop;
 
         let item = ManuallyDrop::new(item);
@@ -95,7 +95,7 @@ mod inner_vec {
             (*self_ptr).push(core::ptr::read(&*item));
         })) {
             Ok(()) => Ok(()),
-            Err(_) => Err(ManuallyDrop::into_inner(item)),
+            Err(_) => Err(Error::InsertFailed(ManuallyDrop::into_inner(item))),
         }
     }
 
@@ -119,7 +119,7 @@ mod inner_vec {
     }
 
     #[inline(always)]
-    pub(crate) fn insert<T>(vec: &mut Vec<T>, index: usize, element: T) -> Result<(), T> {
+    pub(crate) fn insert<T>(vec: &mut Vec<T>, index: usize, element: T) -> Result<(), Error<T>> {
         use core::mem::ManuallyDrop;
 
         let element = ManuallyDrop::new(element);
@@ -129,7 +129,7 @@ mod inner_vec {
             (*self_ptr).insert(index, core::ptr::read(&*element));
         })) {
             Ok(()) => Ok(()),
-            Err(_) => Err(ManuallyDrop::into_inner(element)),
+            Err(_) => Err(Error::InsertFailed(ManuallyDrop::into_inner(element))),
         }
     }
 
@@ -207,7 +207,7 @@ mod inner_vec {
         vec: &mut Vec<T>,
         new_len: usize,
         value: T,
-    ) -> Result<(), CapacityError> {
+    ) -> Result<(), Error<T>> {
         let self_ptr = vec as *mut Vec<T>;
         let value_ptr = &value as *const T;
 
@@ -215,7 +215,7 @@ mod inner_vec {
             (*self_ptr).resize(new_len, (*value_ptr).clone());
         })) {
             Ok(()) => Ok(()),
-            Err(_) => Err(CapacityError),
+            Err(_) => Err(Error::CapacityExceeded),
         }
     }
 
@@ -224,7 +224,7 @@ mod inner_vec {
         vec: &mut Vec<T>,
         new_len: usize,
         mut f: F,
-    ) -> Result<(), CapacityError>
+    ) -> Result<(), Error<T>>
     where
         F: FnMut() -> T,
     {
@@ -235,7 +235,7 @@ mod inner_vec {
             (*self_ptr).resize_with(new_len, || (*f_ptr)());
         })) {
             Ok(()) => Ok(()),
-            Err(_) => Err(CapacityError),
+            Err(_) => Err(Error::CapacityExceeded),
         }
     }
 
@@ -301,7 +301,7 @@ mod inner_vec {
     }
 
     #[inline(always)]
-    pub(crate) fn append<T>(vec: &mut Vec<T>, other: &mut Vec<T>) -> Result<(), CapacityError> {
+    pub(crate) fn append<T>(vec: &mut Vec<T>, other: &mut Vec<T>) -> Result<(), Error<T>> {
         let self_ptr = vec as *mut Vec<T>;
         let other_ptr = other as *mut Vec<T>;
 
@@ -309,7 +309,7 @@ mod inner_vec {
             (*self_ptr).append(&mut *other_ptr);
         })) {
             Ok(()) => Ok(()),
-            Err(_) => Err(CapacityError),
+            Err(_) => Err(Error::CapacityExceeded),
         }
     }
 
@@ -370,7 +370,17 @@ impl<T> CollectionMut<T> for Vec<T> {
     }
 }
 
-impl<T> List<T> for Vec<T> {
+impl<T: PartialEq + core::fmt::Debug> List<T> for Vec<T> {
+    type Slice<'a>
+        = &'a [T]
+    where
+        T: 'a;
+
+    #[inline(always)]
+    fn as_slice(&self) -> Self::Slice<'_> {
+        Vec::as_slice(self)
+    }
+
     fn find_index(&self, other: &T) -> Option<usize>
     where
         T: PartialEq,
@@ -435,13 +445,21 @@ impl<T> List<T> for Vec<T> {
     }
 }
 
-impl<T> ListMut<T> for Vec<T> {
+impl<T: PartialEq + core::fmt::Debug> ListMut<T> for Vec<T> {
+    #[inline(always)]
+    fn new() -> Self
+    where
+        Self: Sized,
+    {
+        Vec::new()
+    }
+
     #[inline(always)]
     fn capacity(&self) -> usize {
         self.capacity()
     }
 
-    fn push(&mut self, item: T) -> Result<(), T> {
+    fn push(&mut self, item: T) -> Result<(), Error<T>> {
         inner_vec::push(self, item)
     }
 
@@ -465,7 +483,7 @@ impl<T> ListMut<T> for Vec<T> {
         inner_vec::get_mut(self, index)
     }
 
-    fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
+    fn insert(&mut self, index: usize, element: T) -> Result<(), Error<T>> {
         inner_vec::insert(self, index, element)
     }
 
@@ -551,7 +569,7 @@ impl<T> ListMut<T> for Vec<T> {
         inner_vec::fill_with(self, f)
     }
 
-    fn append(&mut self, other: &mut Self) -> Result<(), CapacityError>
+    fn append(&mut self, other: &mut Self) -> Result<(), Error<T>>
     where
         T: Clone,
     {
@@ -564,9 +582,9 @@ impl<T> ListMut<T> for Vec<T> {
     }
 }
 
-impl<T> ListResizable<T> for Vec<T> {
+impl<T: PartialEq + core::fmt::Debug> ListResizable<T> for Vec<T> {
     #[inline(always)]
-    fn resize(&mut self, new_len: usize, value: T) -> Result<(), CapacityError>
+    fn resize(&mut self, new_len: usize, value: T) -> Result<(), Error<T>>
     where
         T: Clone,
     {
@@ -574,7 +592,7 @@ impl<T> ListResizable<T> for Vec<T> {
     }
 
     #[inline(always)]
-    fn resize_with<F>(&mut self, new_len: usize, f: F) -> Result<(), CapacityError>
+    fn resize_with<F>(&mut self, new_len: usize, f: F) -> Result<(), Error<T>>
     where
         F: FnMut() -> T,
     {
@@ -592,7 +610,7 @@ impl<T> ListResizable<T> for Vec<T> {
     }
 }
 
-impl<T> ListSortable<T> for Vec<T> {
+impl<T: PartialEq + core::fmt::Debug> ListSortable<T> for Vec<T> {
     #[inline(always)]
     fn sort(&mut self)
     where

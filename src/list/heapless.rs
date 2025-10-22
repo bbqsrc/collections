@@ -1,8 +1,12 @@
-use super::{CapacityError, List, ListMut};
-use crate::{Collection, CollectionMut, Iterable, IterableMut};
+use core::fmt::Debug;
+
+use super::{List, ListMut};
+use crate::{Collection, CollectionMut, Error, Iterable, IterableMut};
 
 mod inner_vec {
     use core::slice::{Iter, IterMut};
+
+    use crate::Error;
 
     #[inline(always)]
     pub(crate) fn iter<T, const N: usize>(vec: &heapless::Vec<T, N>) -> Iter<'_, T> {
@@ -25,8 +29,16 @@ mod inner_vec {
     }
 
     #[inline(always)]
-    pub(crate) fn push<T, const N: usize>(vec: &mut heapless::Vec<T, N>, item: T) -> Result<(), T> {
-        vec.push(item)
+    pub(crate) fn capacity<T, const N: usize>(vec: &heapless::Vec<T, N>) -> usize {
+        vec.capacity()
+    }
+
+    #[inline(always)]
+    pub(crate) fn push<T, const N: usize>(
+        vec: &mut heapless::Vec<T, N>,
+        item: T,
+    ) -> Result<(), Error<T>> {
+        vec.push(item).map_err(Error::InsertFailed)
     }
 
     #[inline(always)]
@@ -253,9 +265,9 @@ mod inner_vec {
     pub(crate) fn append<T: Clone, const N: usize>(
         vec: &mut heapless::Vec<T, N>,
         other: &mut heapless::Vec<T, N>,
-    ) -> Result<(), super::CapacityError> {
+    ) -> Result<(), Error<T>> {
         vec.extend_from_slice(other)
-            .map_err(|_| super::CapacityError)?;
+            .map_err(|_| Error::CapacityExceeded)?;
         other.clear();
         Ok(())
     }
@@ -274,6 +286,11 @@ mod inner_vec {
             vec.truncate(at);
         }
         new_vec
+    }
+
+    #[inline(always)]
+    pub(crate) fn new<T, const N: usize>() -> heapless::Vec<T, N> {
+        heapless::Vec::new()
     }
 }
 
@@ -328,7 +345,17 @@ impl<T, const N: usize> CollectionMut<T> for heapless::Vec<T, N> {
     }
 }
 
-impl<T, const N: usize> List<T> for heapless::Vec<T, N> {
+impl<T: PartialEq + Debug, const N: usize> List<T> for heapless::Vec<T, N> {
+    type Slice<'a>
+        = &'a [T]
+    where
+        T: 'a;
+
+    #[inline(always)]
+    fn as_slice(&self) -> Self::Slice<'_> {
+        heapless::Vec::as_slice(self)
+    }
+
     fn find_index(&self, other: &T) -> Option<usize>
     where
         T: PartialEq,
@@ -393,14 +420,22 @@ impl<T, const N: usize> List<T> for heapless::Vec<T, N> {
     }
 }
 
-impl<T, const N: usize> ListMut<T> for heapless::Vec<T, N> {
+impl<T: PartialEq + Debug, const N: usize> ListMut<T> for heapless::Vec<T, N> {
     #[inline(always)]
-    fn capacity(&self) -> usize {
-        self.capacity()
+    fn new() -> Self
+    where
+        Self: Sized,
+    {
+        inner_vec::new()
     }
 
     #[inline(always)]
-    fn push(&mut self, item: T) -> Result<(), T> {
+    fn capacity(&self) -> usize {
+        inner_vec::capacity(self)
+    }
+
+    #[inline(always)]
+    fn push(&mut self, item: T) -> Result<(), Error<T>> {
         inner_vec::push(self, item)
     }
 
@@ -425,8 +460,8 @@ impl<T, const N: usize> ListMut<T> for heapless::Vec<T, N> {
     }
 
     #[inline(always)]
-    fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
-        inner_vec::insert(self, index, element)
+    fn insert(&mut self, index: usize, element: T) -> Result<(), Error<T>> {
+        inner_vec::insert(self, index, element).map_err(Error::InsertFailed)
     }
 
     #[inline(always)]
@@ -512,7 +547,7 @@ impl<T, const N: usize> ListMut<T> for heapless::Vec<T, N> {
     }
 
     #[inline(always)]
-    fn append(&mut self, other: &mut Self) -> Result<(), CapacityError>
+    fn append(&mut self, other: &mut Self) -> Result<(), Error<T>>
     where
         T: Clone,
     {

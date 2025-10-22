@@ -1,6 +1,13 @@
 use crate::Collection;
 
 pub trait List<T>: Collection<T> {
+    type Slice<'a>: AsRef<[T]> + PartialEq<&'a [T]> + core::fmt::Debug
+    where
+        T: 'a,
+        Self: 'a;
+
+    fn as_slice(&self) -> Self::Slice<'_>;
+
     fn find_index(&self, other: &T) -> Option<usize>
     where
         T: PartialEq;

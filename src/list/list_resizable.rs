@@ -1,12 +1,10 @@
-use crate::ListMut;
-
-use super::CapacityError;
+use crate::{Error, ListMut};
 
 pub trait ListResizable<T>: ListMut<T> {
-    fn resize(&mut self, new_len: usize, value: T) -> Result<(), CapacityError>
+    fn resize(&mut self, new_len: usize, value: T) -> Result<(), Error<T>>
     where
         T: Clone;
-    fn resize_with<F>(&mut self, new_len: usize, f: F) -> Result<(), CapacityError>
+    fn resize_with<F>(&mut self, new_len: usize, f: F) -> Result<(), Error<T>>
     where
         F: FnMut() -> T;
     fn reserve(&mut self, additional: usize);

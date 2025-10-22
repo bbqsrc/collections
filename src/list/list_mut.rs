@@ -1,9 +1,11 @@
-use crate::{CollectionMut, List};
-
-use super::CapacityError;
+use crate::{CollectionMut, Error, List};
 
 pub trait ListMut<T>: List<T> + CollectionMut<T> {
-    fn push(&mut self, item: T) -> Result<(), T>;
+    fn new() -> Self
+    where
+        Self: Sized;
+
+    fn push(&mut self, item: T) -> Result<(), Error<T>>;
     fn pop(&mut self) -> Option<T>;
     fn capacity(&self) -> usize;
 
@@ -11,7 +13,7 @@ pub trait ListMut<T>: List<T> + CollectionMut<T> {
     fn last_mut(&mut self) -> Option<&mut T>;
     fn get_mut(&mut self, index: usize) -> Option<&mut T>;
 
-    fn insert(&mut self, index: usize, element: T) -> Result<(), T>;
+    fn insert(&mut self, index: usize, element: T) -> Result<(), Error<T>>;
     fn remove(&mut self, index: usize) -> T;
     fn swap_remove(&mut self, index: usize) -> T;
 
@@ -44,7 +46,7 @@ pub trait ListMut<T>: List<T> + CollectionMut<T> {
     where
         F: FnMut() -> T;
 
-    fn append(&mut self, other: &mut Self) -> Result<(), CapacityError>
+    fn append(&mut self, other: &mut Self) -> Result<(), Error<T>>
     where
         T: Clone;
     fn split_off(&mut self, at: usize) -> Self
