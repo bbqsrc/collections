@@ -11,6 +11,6 @@ mod set;
 
 pub use collection::{Collection, CollectionMut};
 pub use iter::{Iterable, IterableMut};
-pub use list::{List, ListMut, ListResizable};
+pub use list::{CapacityError, List, ListMut, ListResizable, ListSortable};
 pub use map::{Map, MapMut};
 pub use set::{Set, SetMut};

@@ -1,4 +1,4 @@
-use super::{List, ListMut};
+use super::{CapacityError, List, ListMut};
 use crate::{Collection, CollectionMut, Iterable, IterableMut};
 
 mod inner_vec {
@@ -120,8 +120,8 @@ mod inner_vec {
         vec: &mut heapless::Vec<T, N>,
         index: usize,
         element: T,
-    ) {
-        let _ = vec.insert(index, element);
+    ) -> Result<(), T> {
+        vec.insert(index, element)
     }
 
     #[inline(always)]
@@ -142,50 +142,6 @@ mod inner_vec {
     #[inline(always)]
     pub(crate) fn reverse<T, const N: usize>(vec: &mut heapless::Vec<T, N>) {
         vec.reverse()
-    }
-
-    #[inline(always)]
-    pub(crate) fn sort<T: Ord, const N: usize>(vec: &mut heapless::Vec<T, N>) {
-        vec.sort()
-    }
-
-    #[inline(always)]
-    pub(crate) fn sort_by<T, F, const N: usize>(vec: &mut heapless::Vec<T, N>, compare: F)
-    where
-        F: FnMut(&T, &T) -> core::cmp::Ordering,
-    {
-        vec.sort_by(compare)
-    }
-
-    #[inline(always)]
-    pub(crate) fn sort_by_key<T, K, F, const N: usize>(vec: &mut heapless::Vec<T, N>, f: F)
-    where
-        F: FnMut(&T) -> K,
-        K: Ord,
-    {
-        vec.sort_by_key(f)
-    }
-
-    #[inline(always)]
-    pub(crate) fn sort_unstable<T: Ord, const N: usize>(vec: &mut heapless::Vec<T, N>) {
-        vec.sort_unstable()
-    }
-
-    #[inline(always)]
-    pub(crate) fn sort_unstable_by<T, F, const N: usize>(vec: &mut heapless::Vec<T, N>, compare: F)
-    where
-        F: FnMut(&T, &T) -> core::cmp::Ordering,
-    {
-        vec.sort_unstable_by(compare)
-    }
-
-    #[inline(always)]
-    pub(crate) fn sort_unstable_by_key<T, K, F, const N: usize>(vec: &mut heapless::Vec<T, N>, f: F)
-    where
-        F: FnMut(&T) -> K,
-        K: Ord,
-    {
-        vec.sort_unstable_by_key(f)
     }
 
     #[inline(always)]
@@ -297,9 +253,11 @@ mod inner_vec {
     pub(crate) fn append<T: Clone, const N: usize>(
         vec: &mut heapless::Vec<T, N>,
         other: &mut heapless::Vec<T, N>,
-    ) {
-        let _ = vec.extend_from_slice(other);
+    ) -> Result<(), super::CapacityError> {
+        vec.extend_from_slice(other)
+            .map_err(|_| super::CapacityError)?;
         other.clear();
+        Ok(())
     }
 
     #[inline(always)]
@@ -442,8 +400,8 @@ impl<T, const N: usize> ListMut<T> for heapless::Vec<T, N> {
     }
 
     #[inline(always)]
-    fn push(&mut self, item: T) {
-        let _ = inner_vec::push(self, item);
+    fn push(&mut self, item: T) -> Result<(), T> {
+        inner_vec::push(self, item)
     }
 
     #[inline(always)]
@@ -467,7 +425,7 @@ impl<T, const N: usize> ListMut<T> for heapless::Vec<T, N> {
     }
 
     #[inline(always)]
-    fn insert(&mut self, index: usize, element: T) {
+    fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
         inner_vec::insert(self, index, element)
     }
 
@@ -489,56 +447,6 @@ impl<T, const N: usize> ListMut<T> for heapless::Vec<T, N> {
     #[inline(always)]
     fn reverse(&mut self) {
         inner_vec::reverse(self)
-    }
-
-    #[inline(always)]
-    fn sort(&mut self)
-    where
-        T: Ord,
-    {
-        inner_vec::sort(self)
-    }
-
-    #[inline(always)]
-    fn sort_by<F>(&mut self, compare: F)
-    where
-        F: FnMut(&T, &T) -> core::cmp::Ordering,
-    {
-        inner_vec::sort_by(self, compare)
-    }
-
-    #[inline(always)]
-    fn sort_by_key<K, F>(&mut self, f: F)
-    where
-        F: FnMut(&T) -> K,
-        K: Ord,
-    {
-        inner_vec::sort_by_key(self, f)
-    }
-
-    #[inline(always)]
-    fn sort_unstable(&mut self)
-    where
-        T: Ord,
-    {
-        inner_vec::sort_unstable(self)
-    }
-
-    #[inline(always)]
-    fn sort_unstable_by<F>(&mut self, compare: F)
-    where
-        F: FnMut(&T, &T) -> core::cmp::Ordering,
-    {
-        inner_vec::sort_unstable_by(self, compare)
-    }
-
-    #[inline(always)]
-    fn sort_unstable_by_key<K, F>(&mut self, f: F)
-    where
-        F: FnMut(&T) -> K,
-        K: Ord,
-    {
-        inner_vec::sort_unstable_by_key(self, f)
     }
 
     #[inline(always)]
@@ -604,7 +512,7 @@ impl<T, const N: usize> ListMut<T> for heapless::Vec<T, N> {
     }
 
     #[inline(always)]
-    fn append(&mut self, other: &mut Self)
+    fn append(&mut self, other: &mut Self) -> Result<(), CapacityError>
     where
         T: Clone,
     {

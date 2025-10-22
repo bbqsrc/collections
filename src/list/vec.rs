@@ -1,11 +1,26 @@
 use alloc::vec::Vec;
 
-use super::{List, ListMut, ListResizable};
+use super::{CapacityError, List, ListMut, ListResizable, ListSortable};
 use crate::{Collection, CollectionMut, Iterable, IterableMut};
 
 mod inner_vec {
     use alloc::vec::Vec;
-    use core::slice::{Iter, IterMut};
+    use core::{
+        panic::AssertUnwindSafe,
+        slice::{Iter, IterMut},
+    };
+
+    #[cfg(feature = "std")]
+    use std::panic::catch_unwind;
+
+    #[cfg(not(feature = "std"))]
+    fn catch_unwind<F: FnOnce() -> R + core::panic::UnwindSafe, R>(
+        f: F,
+    ) -> Result<R, alloc::boxed::Box<dyn core::any::Any + Send + 'static>> {
+        Ok(f())
+    }
+
+    use crate::CapacityError;
 
     #[inline(always)]
     pub(crate) fn iter<T>(vec: &Vec<T>) -> Iter<'_, T> {
@@ -70,6 +85,25 @@ mod inner_vec {
     }
 
     #[inline(always)]
+    pub(crate) fn push<T>(vec: &mut Vec<T>, item: T) -> Result<(), T> {
+        use core::mem::ManuallyDrop;
+
+        let item = ManuallyDrop::new(item);
+        let self_ptr = vec as *mut Vec<T>;
+
+        match catch_unwind(AssertUnwindSafe(|| unsafe {
+            (*self_ptr).push(core::ptr::read(&*item));
+        })) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(ManuallyDrop::into_inner(item)),
+        }
+    }
+
+    pub(crate) fn pop<T>(vec: &mut Vec<T>) -> Option<T> {
+        vec.pop()
+    }
+
+    #[inline(always)]
     pub(crate) fn first_mut<T>(vec: &mut Vec<T>) -> Option<&mut T> {
         vec.first_mut()
     }
@@ -85,8 +119,18 @@ mod inner_vec {
     }
 
     #[inline(always)]
-    pub(crate) fn insert<T>(vec: &mut Vec<T>, index: usize, element: T) {
-        vec.insert(index, element)
+    pub(crate) fn insert<T>(vec: &mut Vec<T>, index: usize, element: T) -> Result<(), T> {
+        use core::mem::ManuallyDrop;
+
+        let element = ManuallyDrop::new(element);
+        let self_ptr = vec as *mut Vec<T>;
+
+        match catch_unwind(AssertUnwindSafe(|| unsafe {
+            (*self_ptr).insert(index, core::ptr::read(&*element));
+        })) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(ManuallyDrop::into_inner(element)),
+        }
     }
 
     #[inline(always)]
@@ -159,16 +203,40 @@ mod inner_vec {
     }
 
     #[inline(always)]
-    pub(crate) fn resize<T: Clone>(vec: &mut Vec<T>, new_len: usize, value: T) {
-        vec.resize(new_len, value)
+    pub(crate) fn resize<T: Clone>(
+        vec: &mut Vec<T>,
+        new_len: usize,
+        value: T,
+    ) -> Result<(), CapacityError> {
+        let self_ptr = vec as *mut Vec<T>;
+        let value_ptr = &value as *const T;
+
+        match catch_unwind(AssertUnwindSafe(|| unsafe {
+            (*self_ptr).resize(new_len, (*value_ptr).clone());
+        })) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(CapacityError),
+        }
     }
 
     #[inline(always)]
-    pub(crate) fn resize_with<T, F>(vec: &mut Vec<T>, new_len: usize, f: F)
+    pub(crate) fn resize_with<T, F>(
+        vec: &mut Vec<T>,
+        new_len: usize,
+        mut f: F,
+    ) -> Result<(), CapacityError>
     where
         F: FnMut() -> T,
     {
-        vec.resize_with(new_len, f)
+        let self_ptr = vec as *mut Vec<T>;
+        let f_ptr = &mut f as *mut F;
+
+        match catch_unwind(AssertUnwindSafe(|| unsafe {
+            (*self_ptr).resize_with(new_len, || (*f_ptr)());
+        })) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(CapacityError),
+        }
     }
 
     #[inline(always)]
@@ -233,8 +301,16 @@ mod inner_vec {
     }
 
     #[inline(always)]
-    pub(crate) fn append<T>(vec: &mut Vec<T>, other: &mut Vec<T>) {
-        vec.append(other)
+    pub(crate) fn append<T>(vec: &mut Vec<T>, other: &mut Vec<T>) -> Result<(), CapacityError> {
+        let self_ptr = vec as *mut Vec<T>;
+        let other_ptr = other as *mut Vec<T>;
+
+        match catch_unwind(AssertUnwindSafe(|| unsafe {
+            (*self_ptr).append(&mut *other_ptr);
+        })) {
+            Ok(()) => Ok(()),
+            Err(_) => Err(CapacityError),
+        }
     }
 
     #[inline(always)]
@@ -365,14 +441,13 @@ impl<T> ListMut<T> for Vec<T> {
         self.capacity()
     }
 
-    #[inline(always)]
-    fn push(&mut self, item: T) {
-        self.push(item)
+    fn push(&mut self, item: T) -> Result<(), T> {
+        inner_vec::push(self, item)
     }
 
     #[inline(always)]
     fn pop(&mut self) -> Option<T> {
-        self.pop()
+        inner_vec::pop(self)
     }
 
     #[inline(always)]
@@ -390,8 +465,7 @@ impl<T> ListMut<T> for Vec<T> {
         inner_vec::get_mut(self, index)
     }
 
-    #[inline(always)]
-    fn insert(&mut self, index: usize, element: T) {
+    fn insert(&mut self, index: usize, element: T) -> Result<(), T> {
         inner_vec::insert(self, index, element)
     }
 
@@ -413,56 +487,6 @@ impl<T> ListMut<T> for Vec<T> {
     #[inline(always)]
     fn reverse(&mut self) {
         inner_vec::reverse(self)
-    }
-
-    #[inline(always)]
-    fn sort(&mut self)
-    where
-        T: Ord,
-    {
-        inner_vec::sort(self)
-    }
-
-    #[inline(always)]
-    fn sort_by<F>(&mut self, compare: F)
-    where
-        F: FnMut(&T, &T) -> core::cmp::Ordering,
-    {
-        inner_vec::sort_by(self, compare)
-    }
-
-    #[inline(always)]
-    fn sort_by_key<K, F>(&mut self, f: F)
-    where
-        F: FnMut(&T) -> K,
-        K: Ord,
-    {
-        inner_vec::sort_by_key(self, f)
-    }
-
-    #[inline(always)]
-    fn sort_unstable(&mut self)
-    where
-        T: Ord,
-    {
-        inner_vec::sort_unstable(self)
-    }
-
-    #[inline(always)]
-    fn sort_unstable_by<F>(&mut self, compare: F)
-    where
-        F: FnMut(&T, &T) -> core::cmp::Ordering,
-    {
-        inner_vec::sort_unstable_by(self, compare)
-    }
-
-    #[inline(always)]
-    fn sort_unstable_by_key<K, F>(&mut self, f: F)
-    where
-        F: FnMut(&T) -> K,
-        K: Ord,
-    {
-        inner_vec::sort_unstable_by_key(self, f)
     }
 
     #[inline(always)]
@@ -527,8 +551,10 @@ impl<T> ListMut<T> for Vec<T> {
         inner_vec::fill_with(self, f)
     }
 
-    #[inline(always)]
-    fn append(&mut self, other: &mut Self) {
+    fn append(&mut self, other: &mut Self) -> Result<(), CapacityError>
+    where
+        T: Clone,
+    {
         inner_vec::append(self, other)
     }
 
@@ -540,7 +566,7 @@ impl<T> ListMut<T> for Vec<T> {
 
 impl<T> ListResizable<T> for Vec<T> {
     #[inline(always)]
-    fn resize(&mut self, new_len: usize, value: T)
+    fn resize(&mut self, new_len: usize, value: T) -> Result<(), CapacityError>
     where
         T: Clone,
     {
@@ -548,7 +574,7 @@ impl<T> ListResizable<T> for Vec<T> {
     }
 
     #[inline(always)]
-    fn resize_with<F>(&mut self, new_len: usize, f: F)
+    fn resize_with<F>(&mut self, new_len: usize, f: F) -> Result<(), CapacityError>
     where
         F: FnMut() -> T,
     {
@@ -563,5 +589,57 @@ impl<T> ListResizable<T> for Vec<T> {
     #[inline(always)]
     fn shrink_to_fit(&mut self) {
         inner_vec::shrink_to_fit(self)
+    }
+}
+
+impl<T> ListSortable<T> for Vec<T> {
+    #[inline(always)]
+    fn sort(&mut self)
+    where
+        T: Ord,
+    {
+        inner_vec::sort(self)
+    }
+
+    #[inline(always)]
+    fn sort_by<F>(&mut self, compare: F)
+    where
+        F: FnMut(&T, &T) -> core::cmp::Ordering,
+    {
+        inner_vec::sort_by(self, compare)
+    }
+
+    #[inline(always)]
+    fn sort_by_key<K, F>(&mut self, f: F)
+    where
+        F: FnMut(&T) -> K,
+        K: Ord,
+    {
+        inner_vec::sort_by_key(self, f)
+    }
+
+    #[inline(always)]
+    fn sort_unstable(&mut self)
+    where
+        T: Ord,
+    {
+        inner_vec::sort_unstable(self)
+    }
+
+    #[inline(always)]
+    fn sort_unstable_by<F>(&mut self, compare: F)
+    where
+        F: FnMut(&T, &T) -> core::cmp::Ordering,
+    {
+        inner_vec::sort_unstable_by(self, compare)
+    }
+
+    #[inline(always)]
+    fn sort_unstable_by_key<K, F>(&mut self, f: F)
+    where
+        F: FnMut(&T) -> K,
+        K: Ord,
+    {
+        inner_vec::sort_unstable_by_key(self, f)
     }
 }

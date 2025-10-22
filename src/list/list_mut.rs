@@ -1,7 +1,9 @@
 use crate::{CollectionMut, List};
 
+use super::CapacityError;
+
 pub trait ListMut<T>: List<T> + CollectionMut<T> {
-    fn push(&mut self, item: T);
+    fn push(&mut self, item: T) -> Result<(), T>;
     fn pop(&mut self) -> Option<T>;
     fn capacity(&self) -> usize;
 
@@ -9,33 +11,12 @@ pub trait ListMut<T>: List<T> + CollectionMut<T> {
     fn last_mut(&mut self) -> Option<&mut T>;
     fn get_mut(&mut self, index: usize) -> Option<&mut T>;
 
-    fn insert(&mut self, index: usize, element: T);
+    fn insert(&mut self, index: usize, element: T) -> Result<(), T>;
     fn remove(&mut self, index: usize) -> T;
     fn swap_remove(&mut self, index: usize) -> T;
 
     fn swap(&mut self, a: usize, b: usize);
     fn reverse(&mut self);
-
-    fn sort(&mut self)
-    where
-        T: Ord;
-    fn sort_by<F>(&mut self, compare: F)
-    where
-        F: FnMut(&T, &T) -> core::cmp::Ordering;
-    fn sort_by_key<K, F>(&mut self, f: F)
-    where
-        F: FnMut(&T) -> K,
-        K: Ord;
-    fn sort_unstable(&mut self)
-    where
-        T: Ord;
-    fn sort_unstable_by<F>(&mut self, compare: F)
-    where
-        F: FnMut(&T, &T) -> core::cmp::Ordering;
-    fn sort_unstable_by_key<K, F>(&mut self, f: F)
-    where
-        F: FnMut(&T) -> K,
-        K: Ord;
 
     fn truncate(&mut self, len: usize);
 
@@ -63,7 +44,7 @@ pub trait ListMut<T>: List<T> + CollectionMut<T> {
     where
         F: FnMut() -> T;
 
-    fn append(&mut self, other: &mut Self)
+    fn append(&mut self, other: &mut Self) -> Result<(), CapacityError>
     where
         T: Clone;
     fn split_off(&mut self, at: usize) -> Self

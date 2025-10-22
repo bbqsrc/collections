@@ -348,10 +348,3 @@ mod alloc {
         }
     }
 }
-
-#[cfg(feature = "std")]
-#[allow(unused_imports)]
-pub use self::std::*;
-
-#[cfg(all(not(feature = "std"), feature = "alloc"))]
-pub use self::alloc::*;
